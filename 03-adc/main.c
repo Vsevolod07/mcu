@@ -4,6 +4,7 @@
 #include "protocol-task/protocol-task.h"
 #include "led-task/led-task.h"
 #include "stdio.h"
+#include "adc-task/adc-task.h"
 
 #define DEVICE_NAME "my-pico-device"
 #define DEVICE_VRSN "v0.0.1"
@@ -45,49 +46,28 @@ void led_blink_set_period_ms_callback(const char* args)
 
 void help_callback(const char* args);
 
-
-void mem_callback(const char* args)
+void get_adc_callback(const char* args)
 {
-    uint32_t addr = 0;
-    
-    if (sscanf(args, "%x", &addr) != 1) {
-        printf("Error: mem requires HEX address\n");
-        return;
-    }
-
-    uint32_t value = *(volatile uint32_t*)addr;
-    
-    printf("mem[0x%08X] = 0x%08X (%u)\n", addr, value, value);
+    float voltage = adc_task_read_voltage();
+    printf("%f\n", voltage);
 }
 
-void wmem_callback(const char* args)
+void get_temp_callback(const char* args)
 {
-    uint32_t addr = 0;
-    uint32_t value = 0;
-    
-    if (sscanf(args, "%x %x", &addr, &value) != 2) {
-        printf("Error: wmem requires HEX address and HEX value\n");
-        return;
-    }
-    
-    *(volatile uint32_t*)addr = value;
-    
-    printf("wmem[0x%08X] = 0x%08X\n", addr, value);
-    
-    uint32_t read_back = *(volatile uint32_t*)addr;
-    printf("Read back: 0x%08X\n", read_back);
+    float temp = adc_task_read_temp();
+    printf("%f\n", temp);
 }
 
 api_t device_api[] =
 {
-    {"mem", mem_callback, "read memory at HEX address"},
-    {"wmem", wmem_callback, "write HEX value to HEX addr"},
+    {"get_temp", get_temp_callback, "Read temperature sensor"},
+    {"get_adc", get_adc_callback, "Read ADC voltage"},
     {"help", help_callback, "List of commands"},
     {"set_period", led_blink_set_period_ms_callback, "Set a period of blinking"},
-    {"on", led_on_callback, "turn on led"},
-    {"off", led_off_callback, "turn off led"},
-    {"blink", led_blink_callback, "make led blink"},
-	{"version", version_callback, "get device name and firmware version"},
+    {"on", led_on_callback, "Turn on led"},
+    {"off", led_off_callback, "Turn off led"},
+    {"blink", led_blink_callback, "Make led blink"},
+	{"version", version_callback, "Get device name and firmware version"},
 	{NULL, NULL, NULL},
 };
 
@@ -106,6 +86,7 @@ int main()
     stdio_init_all();
     stdio_task_init();
     led_task_init();
+    adc_task_init();
     protocol_task_init(device_api);
     while (1)
 {
